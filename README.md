@@ -6,7 +6,7 @@ KneeBot is a production-quality, Flask-based web platform that provides AI-power
 
 ```bash
 # 1. Navigate to the project
-cd /Users/surajreddyloka/Desktop/KneeReplacementbot
+cd C:\PINKY\knee replacement\Knee_Replacement
 
 # 2. Install dependencies (one time)
 pip install -r requirements.txt

@@ -6,6 +6,13 @@ Accessible: http://localhost:5001
 """
 
 import os
+import sys
+
+# Ensure UTF-8 output encoding to prevent UnicodeEncodeErrors on Windows terminal
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
+# pyrefly: ignore [missing-import]
 from flask import Flask
 from extensions import db
 from routes import main
