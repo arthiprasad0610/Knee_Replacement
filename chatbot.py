@@ -8,8 +8,25 @@ Architecture:
   - Returns structured response with intent label and message text
 """
 
+import os
 import re
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+import google.generativeai as genai
+
+# Load environment variables
+load_dotenv()
+
+# Configure Gemini if key is provided
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+gemini_enabled = False
+
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_enabled = True
+    except Exception as e:
+        print(f"Error configuring Gemini API: {e}")
 
 # ---------------------------------------------------------------------------
 # Intent Knowledge Base
@@ -164,7 +181,7 @@ INTENTS = [
     # ── Exercises ────────────────────────────────────────────────────────
     {
         "intent": "exercises",
-        "keywords": ["exercise", "exercises", "physiotherapy", "physio", "stretches", "rehab", "rehabilitation", "workout", "physical therapy", "flexion", "extension", "range of motion", "squats", "cycling", "swimming", "walk", "walking"],
+        "keywords": ["exercise", "exercises", "physiotherapy", "physio", "stretches", "rehab", "rehabilitation", "workout", "physical therapy", "flexion", "extension", "range of motion", "squats", "cycling", "swimming", "walk", "walking", "bend", "bending", "stiff", "stiffness", "stretch"],
         "response": (
             "🏋️ <strong>Knee Replacement Rehabilitation Exercises</strong><br><br>"
             "📅 <b>Week 1 (Gentle Activation):</b><br>"
@@ -565,6 +582,121 @@ INTENTS = [
         "emergency": False,
     },
 
+    # ── Showering & Bathing ───────────────────────────────────────────────
+    {
+        "intent": "showering",
+        "keywords": ["shower", "showering", "bath", "bathing", "wash", "washing", "wet", "water on wound", "get the wound wet", "get wound wet", "wound wet"],
+        "response": (
+            "🚿 <strong>Showering & Bathing After Surgery</strong><br><br>"
+            "🩹 <b>General Timeline:</b><br>"
+            "• <b>First 48 hours:</b> Keep the incision completely dry. Do not shower.<br>"
+            "• <b>After 48 hours (with waterproof dressing):</b> You can typically take a quick shower if your surgeon used a waterproof dressing. Do not remove the dressing.<br>"
+            "• <b>Without waterproof dressing / Staples exposed:</b> Avoid direct water until staples/sutures are removed (usually 10–14 days). Use sponge baths.<br><br>"
+            "⚠️ <b>Important Precautions:</b><br>"
+            "• <b>No soaking:</b> Do NOT submerge your knee in a bath, hot tub, or swimming pool until the wound is fully healed (typically 4–6 weeks).<br>"
+            "• <b>Safety first:</b> Use a shower chair or grab bars to prevent slipping. Do not bend excessively to wash your leg.<br>"
+            "• <b>Dry gently:</b> Pat the area dry with a clean towel; do not rub the incision."
+        ),
+        "emergency": False,
+    },
+
+    # ── Ice vs Heat ───────────────────────────────────────────────────────
+    {
+        "intent": "ice_vs_heat",
+        "keywords": ["ice or heat", "heat or ice", "heating pad", "hot pack", "warm compress", "use heat", "when to use heat"],
+        "response": (
+            "❄️🔥 <strong>Ice vs. Heat for Knee Recovery</strong><br><br>"
+            "❄️ <b>Ice (Recommended for early recovery):</b><br>"
+            "• <b>When:</b> First 3–6 months post-surgery, especially after exercises or when swollen.<br>"
+            "• <b>Why:</b> Constricts blood vessels, reduces swelling, and numbs pain.<br>"
+            "• <b>How:</b> 15–20 minutes at a time, wrapping the ice pack in a thin towel (never apply ice directly to skin).<br><br>"
+            "🔥 <b>Heat (Use with caution):</b><br>"
+            "• <b>When:</b> Only after the surgical swelling has completely resolved (usually 3–4 months post-op) and if you have chronic muscle stiffness.<br>"
+            "• <b>Why:</b> Relaxes muscles and increases blood circulation.<br>"
+            "• <b>Caution:</b> Applying heat too early will **increase swelling and inflammation** in the surgical area.<br><br>"
+            "👉 Rule of thumb: If in doubt, stick to <b>Ice</b>!"
+        ),
+        "emergency": False,
+    },
+
+    # ── Kneeling ──────────────────────────────────────────────────────────
+    {
+        "intent": "kneeling",
+        "keywords": ["kneel", "kneeling", "on my knees", "get on knees", "kneel down"],
+        "response": (
+            "🧎 <strong>Kneeling After Knee Replacement</strong><br><br>"
+            "📌 <b>Can you kneel?</b><br>"
+            "Yes, technically it is safe to kneel on your artificial knee once the wound is fully healed (typically after 3 months). "
+            "It will not damage the prosthesis.<br><br>"
+            "⚠️ <b>What to expect:</b><br>"
+            "• <b>Discomfort:</b> About 60–80% of patients find kneeling uncomfortable or feel a strange sensation due to scar tissue and nerve sensitivity.<br>"
+            "• <b>Numbness:</b> Mild numbness on the outer side of the scar is normal and can make kneeling feel unusual.<br><br>"
+            "💡 <b>Tips for kneeling:</b><br>"
+            "• Use a soft cushion, kneeling pad, or folded towel.<br>"
+            "• Practice kneeling on a soft surface (like a mattress or carpet) first.<br>"
+            "• Try putting weight on the surrounding areas rather than directly on the kneecap."
+        ),
+        "emergency": False,
+    },
+
+    # ── Travel & Airport Security ─────────────────────────────────────────
+    {
+        "intent": "travel_airport",
+        "keywords": ["fly", "flying", "airplane", "airport", "metal detector", "metal detectors", "travel", "travelling", "vacation"],
+        "response": (
+            "✈️ <strong>Travel & Airport Security After Surgery</strong><br><br>"
+            "🔒 <b>Airport Metal Detectors:</b><br>"
+            "• Yes, your metal joint implant will likely set off airport security scanners.<br>"
+            "• Inform the security officers before walking through. They are very used to this and will scan you with a hand wand or body scanner.<br>"
+            "• You do **not** need a doctor's note or certificate; security officers do not rely on them anyway.<br><br>"
+            "🚗✈️ <b>Long Trips & DVT Risk:</b><br>"
+            "• <b>Short flights/trips:</b> Safe after 4–6 weeks.<br>"
+            "• <b>Long-haul flights (>4 hours):</b> Avoid for at least 6–12 weeks to prevent deep vein thrombosis (blood clots).<br><br>"
+            "💡 <b>Travel tips:</b><br>"
+            "• Walk around every 45–60 minutes during long flights or car trips.<br>"
+            "• Wear compression stockings during travel.<br>"
+            "• Stay well-hydrated."
+        ),
+        "emergency": False,
+    },
+
+    # ── Scarring & Numbness ───────────────────────────────────────────────
+    {
+        "intent": "scarring_numbness",
+        "keywords": ["scar", "scars", "numb", "numbness", "skin numb", "incision scar", "scar tissue"],
+        "response": (
+            "🩹 <strong>Scarring & Numbness Around the Incision</strong><br><br>"
+            "📌 <b>Numbness:</b><br>"
+            "• It is extremely common to feel numbness on the **outer (lateral) side** of your knee incision. "
+            "This happens because small skin nerves are cut during the surgical entry.<br>"
+            "• The numb area will gradually shrink over 1–2 years, but some mild numbness may be permanent. This is harmless and does not affect joint function.<br><br>"
+            "🧴 <b>Scar Care (Once fully healed / scab-free):</b><br>"
+            "• <b>Massage:</b> Gently massage the scar in circular motions using moisturiser or vitamin E oil to break up scar tissue adhesions (start around Week 4–6).<br>"
+            "• <b>Sun protection:</b> Keep the scar covered or apply sunscreen (SPF 30+) for the first year to prevent dark discolouration."
+        ),
+        "emergency": False,
+    },
+
+    # ── Clicking & Clunking ───────────────────────────────────────────────
+    {
+        "intent": "clicking_sound",
+        "keywords": ["clicking", "clunking", "popping", "noise", "sound in knee", "knee clicking", "implant noise", "cracking"],
+        "response": (
+            "🔊 <strong>Clicking or Clunking Sound in the Knee</strong><br><br>"
+            "📌 <b>Is it normal?</b><br>"
+            "Yes! Hearing or feeling a clicking, clunking, or popping sound from your new knee is **completely normal** and occurs in up to 80% of patients.<br><br>"
+            "💡 <b>Why it happens:</b><br>"
+            "• The artificial metal and plastic components are contacting each other during movement.<br>"
+            "• As your quadriceps muscles strengthen and swelling decreases, the sound usually becomes quieter and less noticeable.<br><br>"
+            "⚠️ <b>When to worry:</b><br>"
+            "Contact your surgeon only if the clicking is accompanied by:<br>"
+            "• Severe pain<br>"
+            "• A feeling of the joint locking or giving way<br>"
+            "• Sudden swelling or instability"
+        ),
+        "emergency": False,
+    },
+
     # ── Default Fallback ──────────────────────────────────────────────────
     {
         "intent": "unknown",
@@ -614,9 +746,121 @@ def detect_intent(user_message: str) -> dict:
     return best_match if best_match else next(i for i in INTENTS if i["intent"] == "unknown")
 
 
-def get_response(user_message: str) -> dict:
+SYSTEM_INSTRUCTION = (
+    "You are KneeBot, a specialized, warm, and highly professional AI assistant for knee replacement surgery (total and partial arthroplasty).\n"
+    "Your goal is to guide patients through all stages of their knee replacement journey, including pre-surgery preparation, "
+    "post-operative care, exercises (rehabilitation/physiotherapy), pain and swelling management, nutrition/diet, sleep, recovery milestones, and return to work/activities.\n\n"
+    "CRITICAL GUIDELINES:\n"
+    "1. Medical Tone: Provide clear, medically accurate, reassuring, and practical information. Always keep a professional health-advisory stance.\n"
+    "2. Formatting: You MUST format your responses strictly in clean HTML tags for direct rendering in an innerHTML chat bubble. "
+    "Do NOT use markdown. Do NOT use markdown code block formatting (like ```html ... ```). "
+    "Use <p> for paragraphs, <br> for line breaks, <b> or <strong> for bolding, and <ul> with <li> for lists. Keep HTML well-formed.\n"
+    "3. Medical Disclaimer: Where relevant (especially for medications, diagnostics, or when the user asks if something is normal), "
+    "remind the user to consult their orthopaedic surgeon, doctor, or physiotherapist for personalized clinical advice.\n"
+    "4. Emergency Identification: If the user describes emergency symptoms (e.g. chest pain, extreme shortness of breath, sudden severe swelling/redness in the calf, high fever >38.5C, or the wound opening), "
+    "immediately respond with clear instructions to seek emergency services (like 911) or contact their surgeon immediately. Use a red alert visual style or clear bold formatting for emergency callouts.\n"
+    "5. Contextual Follow-up: You have access to the conversation history. Keep prior answers in mind and answer follow-up queries naturally based on context."
+)
+
+
+def check_sub_intents(user_message: str, last_bot_intent: str) -> str:
     """
-    Main chatbot function. Accepts text input, returns response dict.
+    Check if the user is asking a specific follow-up question related to the previous topic.
+    Returns the custom sub-response HTML string if a match is found, otherwise None.
+    """
+    normalized = user_message.lower().strip()
+
+    # -- Sub-intents for DIET --
+    is_diet_context = (last_bot_intent == "diet") or any(kw in normalized for kw in ["diet", "food", "nutrition", "eat", "eating", "foods"])
+    if is_diet_context:
+        if any(w in normalized for w in ["vegetable", "vegetables", "veggies", "green", "greens", "spinach", "broccoli", "carrot", "carrots", "cabbage", "cauliflower", "peas", "plant"]):
+            return (
+                "🥗 <strong>Recommended Vegetables for Knee Recovery</strong><br><br>"
+                "Including anti-inflammatory and vitamin-rich vegetables in your diet is vital for healing:<br><br>"
+                "• 🥦 <b>Broccoli & Brussels Sprouts:</b> Rich in sulforaphane, which helps block enzymes that cause joint pain and inflammation.<br>"
+                "• 🥬 <b>Spinach, Kale & Swiss Chard:</b> Packed with Vitamin C and antioxidants that support collagen production for tendon and cartilage repair.<br>"
+                "• 🫑 <b>Bell Peppers (Red/Yellow):</b> High in Vitamin C, crucial for immune health and wound healing.<br>"
+                "• 🥕 <b>Carrots & Sweet Potatoes:</b> Excellent sources of Vitamin A (Beta-carotene), which assists in cell growth and tissue repair.<br>"
+                "• 🧄 <b>Garlic & Onions:</b> Contain diallyl disulfide, an anti-inflammatory compound that limits damage from inflammatory cytokines.<br><br>"
+                "👉 <i>Tip: Aim for a colorful plate! Try to steam or lightly cook vegetables to preserve their nutrients.</i>"
+            )
+        elif any(w in normalized for w in ["protein", "proteins", "meat", "chicken", "fish", "eggs", "lentils", "tofu", "cottage cheese", "egg", "beef", "pork"]):
+            return (
+                "🥩 <strong>Protein Sources for Muscle & Wound Healing</strong><br><br>"
+                "Protein is the building block of repair. Aim for lean sources to build muscle and repair tissue:<br><br>"
+                "• 🍗 <b>Lean Poultry (Chicken & Turkey):</b> Essential amino acids for tissue reconstruction.<br>"
+                "• 🐟 <b>Fatty Fish (Salmon, Mackerel, Sardines):</b> Provides clean protein plus high levels of anti-inflammatory Omega-3 fatty acids.<br>"
+                "• 🥚 <b>Eggs:</b> Highly bioavailable protein containing zinc and vitamin D.<br>"
+                "• 🧆 <b>Legumes & Lentils:</b> Plant-based proteins rich in zinc and fiber (helps prevent constipation from pain meds).<br>"
+                "• 🥛 <b>Dairy (Greek Yogurt & Cottage Cheese):</b> High protein plus calcium and phosphorus for bone strength."
+            )
+        elif any(w in normalized for w in ["avoid", "bad", "no eat", "limit", "sugar", "alcohol", "processed", "fat", "trans fat", "sodium", "salty"]):
+            return (
+                "🚫 <strong>Foods to Limit or Avoid During Recovery</strong><br><br>"
+                "Certain foods can slow down your recovery by promoting inflammation or swelling:<br><br>"
+                "• 🍭 <b>Sugary Foods & Drinks:</b> High sugar triggers the release of inflammatory cytokines.<br>"
+                "• 🍟 <b>Processed Foods & Trans Fats:</b> Chips, fried foods, and packaged snacks increase systemic inflammation.<br>"
+                "• 🍺 <b>Alcohol:</b> Dehydrates your body, slows down protein synthesis, and has dangerous interactions with pain medications.<br>"
+                "• 🥨 <b>High-Sodium (Salty) Foods:</b> Promotes fluid retention and increases post-operative leg and knee swelling."
+            )
+
+    # -- Sub-intents for EXERCISES --
+    is_exercise_context = (last_bot_intent == "exercises") or any(kw in normalized for kw in ["exercise", "exercises", "physiotherapy", "physio", "stretches", "rehab", "workout"])
+    if is_exercise_context:
+        if any(w in normalized for w in ["week 1", "first week", "ankle pumps", "quad sets", "gentle", "day 1", "day 2", "day 3", "how to start"]):
+            return (
+                "🏋️ <strong>Week 1 Recovery Exercises (Gentle Activation)</strong><br><br>"
+                "Do these exercises 2–3 times a day on a flat bed:<br><br>"
+                "• <b>Ankle Pumps:</b> Move your ankle up and down (like pressing a pedal). Do 10–20 reps to promote blood circulation and prevent DVT.<br>"
+                "• <b>Quad Sets:</b> Tighten your thigh muscle (quadricep) by pressing the back of your knee flat against the bed. Hold for 5 seconds. Repeat 10 times.<br>"
+                "• <b>Straight Leg Raises:</b> Tighten your thigh and lift your leg 6 inches off the bed. Hold for 3 seconds, then lower. Repeat 10 times.<br>"
+                "• <b>Heel Slides:</b> Gently slide your heel toward your buttocks, bending your knee as far as comfortable. Slide back. Repeat 10 times."
+            )
+        elif any(w in normalized for w in ["week 2", "week 3", "week 4", "progress", "sitting", "sitting bends", "chair"]):
+            return (
+                "🚶 <strong>Week 2–4 Recovery Exercises (Progressive Strength)</strong><br><br>"
+                "As swelling starts to settle, progress your mobility:<br><br>"
+                "• <b>Sitting Knee Bends:</b> Sit on a high chair and slide your foot backward under the chair to increase your flexion angle (aim for 90°).<br>"
+                "• <b>Short Arc Quads:</b> Place a rolled towel under your knee. Straighten your knee and lift your foot. Repeat 10 times.<br>"
+                "• <b>Standing Knee Bends:</b> Hold onto a stable counter or walker, and lift your foot behind you, bending your knee to a 90° angle. Repeat 10 times."
+            )
+        elif any(w in normalized for w in ["week 6", "advanced", "cycle", "cycling", "swim", "swimming", "squats", "stairs"]):
+            return (
+                "🚴 <strong>Week 6–12 Advanced Exercises</strong><br><br>"
+                "Move to active conditioning once cleared by your physio:<br><br>"
+                "• <b>Stationary Cycling:</b> Start with low resistance. Even partial rotations back and forth help range of motion.<br>"
+                "• <b>Mini Squats:</b> Hold a stable rail and lower your hips slightly (no more than 45°). Keep your knees aligned over your toes.<br>"
+                "• <b>Hydrotherapy/Swimming:</b> Excellent low-impact exercise once your surgical incision is completely healed and dry."
+            )
+
+    # -- Sub-intents for PAIN MANAGEMENT --
+    is_pain_context = (last_bot_intent == "pain_management") or any(kw in normalized for kw in ["pain", "hurts", "hurt", "painkillers", "pain relief"])
+    if is_pain_context:
+        if any(w in normalized for w in ["medication", "medications", "meds", "med", "painkillers", "opioids", "pills", "paracetamol", "ibuprofen", "drugs"]):
+            return (
+                "💊 <strong>Pain Medications After Knee Replacement</strong><br><br>"
+                "A combination of medications is typically prescribed to manage pain effectively:<br><br>"
+                "• <b>Paracetamol/Acetaminophen:</b> Taken regularly to provide a baseline level of pain relief.<br>"
+                "• <b>NSAIDs (e.g., Ibuprofen, Celecoxib):</b> Helps reduce inflammation and swelling alongside pain relief. Always take with food.<br>"
+                "• <b>Opioids (e.g., Tramadol, Oxycodone):</b> Strong medications reserved for severe pain (typically the first 3–7 days). Use with caution due to addiction and constipation risks.<br><br>"
+                "⚠️ <i>Never exceed the prescribed dosage and consult your doctor before mixing over-the-counter pain relievers.</i>"
+            )
+        elif any(w in normalized for w in ["ice", "icing", "elevate", "elevation", "stockings", "compression", "non-drug", "cold packs"]):
+            return (
+                "❄️ <strong>Non-Drug Pain Management Techniques</strong><br><br>"
+                "You can significantly lower your pain levels using physical therapy methods:<br><br>"
+                "• <b>Elevation:</b> Elevate your leg so that your knee and ankle are *higher than your heart*. This uses gravity to drain fluid and reduce throbbing pain.<br>"
+                "• <b>Icing (Cryotherapy):</b> Apply an ice pack wrapped in a damp towel for 15–20 minutes every 2 hours. This numbs the nerves and constricts inflamed tissues.<br>"
+                "• <b>Compression Stockings:</b> Wear your TED hose as directed to prevent fluid pooling in your lower leg."
+            )
+
+    return None
+
+
+def get_response(user_message: str, history=None) -> dict:
+    """
+    Main chatbot function. Accepts text input and history, returns response dict.
+    Uses Gemini Generative AI if enabled, otherwise falls back to local rules-based engine.
 
     Returns:
         {
@@ -626,13 +870,135 @@ def get_response(user_message: str) -> dict:
           "timestamp": str
         }
     """
-    intent_obj = detect_intent(user_message)
+    global gemini_enabled, GEMINI_API_KEY
+    
+    # Check if a key was set dynamically in environment since last call
+    if not gemini_enabled:
+        env_key = os.environ.get("GEMINI_API_KEY")
+        if env_key:
+            try:
+                genai.configure(api_key=env_key)
+                GEMINI_API_KEY = env_key
+                gemini_enabled = True
+                print("Gemini API configured dynamically via get_response.")
+            except Exception as e:
+                print(f"Error configuring Gemini API dynamically: {e}")
+
+    # Quick symptom scan for user safety
+    is_emergency = check_emergency_symptoms(user_message)
+
+    # Determine the last bot intent from history
+    last_bot_intent = None
+    if history:
+        for msg in reversed(history):
+            role = getattr(msg, "role", None)
+            if role is None and isinstance(msg, dict):
+                role = msg.get("role")
+            
+            if role == "bot":
+                last_bot_intent = getattr(msg, "intent", None)
+                if last_bot_intent is None and isinstance(msg, dict):
+                    last_bot_intent = msg.get("intent")
+                break
+
+    if gemini_enabled:
+        try:
+            # Build conversation history in Gemini format
+            contents = []
+            if history:
+                for msg in history:
+                    role = "user" if msg.role == "user" else "model"
+                    contents.append({
+                        "role": role,
+                        "parts": [{"text": msg.content}]
+                    })
+            
+            # Add the current user query
+            contents.append({
+                "role": "user",
+                "parts": [{"text": user_message}]
+            })
+
+            # Call Gemini
+            model = genai.GenerativeModel(
+                model_name="gemini-1.5-flash",
+                system_instruction=SYSTEM_INSTRUCTION
+            )
+            response = model.generate_content(contents)
+            response_text = response.text.strip()
+            
+            # Perform additional check on generated text for emergency indicators
+            if not is_emergency:
+                is_emergency = check_emergency_symptoms(response_text)
+
+            # Let's clean up any markdown blocks if the LLM output it by accident
+            # e.g., ```html ... ``` or ``` ... ```
+            if response_text.startswith("```html"):
+                response_text = response_text[7:]
+            elif response_text.startswith("```"):
+                response_text = response_text[3:]
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
+
+            # Return the response structure
+            return {
+                "intent": "gemini",
+                "response": response_text,
+                "emergency": is_emergency,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            # Catch Gemini errors gracefully and continue with local engine
+            print(f"Gemini generation error: {e}. Falling back to keyword engine.")
+            sub_resp = check_sub_intents(user_message, last_bot_intent)
+            if sub_resp:
+                intent_name = last_bot_intent if last_bot_intent else "diet"
+                response_content = sub_resp
+                emergency_flag = is_emergency
+            else:
+                fallback_res = detect_intent(user_message)
+                intent_name = fallback_res["intent"]
+                response_content = fallback_res["response"]
+                emergency_flag = is_emergency or fallback_res.get("emergency", False)
+                
+            error_notice = (
+                "<div class='gemini-info-notice' style='margin-bottom: 12px; padding: 10px; background: rgba(255, 255, 255, 0.05); border-left: 3px solid #E53935; border-radius: 4px; font-size: 0.9em;'>"
+                "⚠️ <b>KneeBot Status:</b> Offline fallback activated due to API connection error. Answers may be limited."
+                "</div>"
+            )
+            return {
+                "intent": intent_name,
+                "response": error_notice + response_content,
+                "emergency": emergency_flag,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+    # Keyword engine fallback
+    sub_resp = check_sub_intents(user_message, last_bot_intent)
+    if sub_resp:
+        intent_name = last_bot_intent if last_bot_intent else "diet"
+        response_content = sub_resp
+        emergency_flag = is_emergency
+    else:
+        intent_obj = detect_intent(user_message)
+        intent_name = intent_obj["intent"]
+        response_content = intent_obj["response"]
+        emergency_flag = is_emergency or intent_obj.get("emergency", False)
+
+    notice = (
+        "<div class='gemini-info-notice' style='margin-bottom: 12px; padding: 10px; background: rgba(255, 255, 255, 0.05); border-left: 3px solid #FFB300; border-radius: 4px; font-size: 0.9em;'>"
+        "💡 <b>KneeBot Tip:</b> To enable advanced conversational AI and follow-up questions with Gemini, configure your <code>GEMINI_API_KEY</code> in the <code>.env</code> file."
+        "</div>"
+    )
     return {
-        "intent": intent_obj["intent"],
-        "response": intent_obj["response"],
-        "emergency": intent_obj.get("emergency", False),
+        "intent": intent_name,
+        "response": notice + response_content,
+        "emergency": emergency_flag,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
 
 
 def check_emergency_symptoms(text: str) -> bool:

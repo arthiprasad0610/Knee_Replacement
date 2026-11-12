@@ -36,8 +36,19 @@
 
       <div class="sidebar-info glass-card">
         <h4>📌 About KneeBot</h4>
-        <p>KneeBot uses AI-powered keyword matching across 25+ medical topics. All data stays local — no external API calls.</p>
+        <p>KneeBot uses Gemini AI to answer your queries and remember conversation context. Secure & Intelligent.</p>
         <p class="sidebar-disclaimer">⚠️ Not a substitute for professional medical advice.</p>
+      </div>
+
+      <div class="sidebar-config glass-card" style="margin-top: 15px;">
+        <h4>🔑 Configure Advanced AI</h4>
+        <p style="font-size: 0.85em; opacity: 0.8; margin-bottom: 8px;">Enable Gemini AI to ask any follow-up questions and get personalized answers.</p>
+        <div class="api-key-input-group" style="display: flex; gap: 8px; margin-bottom: 6px;">
+          <input type="password" id="apiKeyInput" placeholder="Enter Gemini API Key" style="flex: 1; padding: 6px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: #fff; font-size: 0.85em;" />
+          <button id="saveKeyBtn" style="padding: 6px 12px; border-radius: 4px; border: none; background: var(--clr-primary, #4F8EF7); color: #fff; font-size: 0.85em; cursor: pointer; font-weight: 500; transition: background 0.2s;">Save</button>
+        </div>
+        <p style="font-size: 0.75em; opacity: 0.7; margin: 0;">Get a free key from <a href="https://aistudio.google.com/" target="_blank" style="color: #4FC3F7; text-decoration: underline;">Google AI Studio</a>.</p>
+        <span id="apiKeyStatus" style="font-size: 0.75em; display: block; margin-top: 6px; font-weight: 500;">Status: Loading...</span>
       </div>
     </aside>
 
@@ -131,6 +142,9 @@
       emergencyId: 'emergencyBanner',
       emergencyCloseId: 'emergencyClose',
       charCounterId: 'charCounter',
+      apiKeyInputId: 'apiKeyInput',
+      saveKeyBtnId:  'saveKeyBtn',
+      apiKeyStatusId:'apiKeyStatus',
     });
   });
 </script>

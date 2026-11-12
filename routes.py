@@ -15,6 +15,7 @@ API endpoints:
   POST /api/emergency-check → Check for emergency symptoms in text
 """
 
+import os
 import uuid
 from datetime import date, timedelta
 from flask import (
@@ -102,12 +103,22 @@ def api_chat():
 
     sid = get_session_id()
 
+    # Retrieve prior conversation messages in chronological order
+    history = (
+        Message.query
+        .filter_by(session_id=sid)
+        .order_by(Message.timestamp.desc())
+        .limit(15)
+        .all()
+    )
+    history = list(reversed(history))
+
     # Save user message
     user_msg = Message(session_id=sid, role="user", content=user_text)
     db.session.add(user_msg)
 
-    # Get bot response
-    bot_data = get_response(user_text)
+    # Get bot response with history context
+    bot_data = get_response(user_text, history=history)
 
     # Save bot message
     bot_msg = Message(
@@ -125,6 +136,21 @@ def api_chat():
         "emergency": bot_data["emergency"],
         "timestamp": bot_data["timestamp"],
     })
+
+
+@main.route("/api/clear-chat", methods=["POST"])
+def api_clear_chat():
+    """
+    Clear all messages for the current session.
+    """
+    sid = get_session_id()
+    try:
+        Message.query.filter_by(session_id=sid).delete()
+        db.session.commit()
+        return jsonify({"status": "cleared"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
 # ---------------------------------------------------------------------------
@@ -466,3 +492,76 @@ def api_emergency_check():
             else "No emergency symptoms detected."
         ),
     })
+
+
+# ---------------------------------------------------------------------------
+# API — Configuration Settings
+# ---------------------------------------------------------------------------
+
+@main.route("/api/status", methods=["GET"])
+def api_status():
+    """Check if Gemini AI is currently active."""
+    import chatbot
+    return jsonify({
+        "gemini_enabled": chatbot.gemini_enabled
+    })
+
+
+@main.route("/api/save-api-key", methods=["POST"])
+def api_save_api_key():
+    """
+    Save Gemini API key to .env file and configure chatbot at runtime.
+    """
+    data = request.get_json(silent=True) or {}
+    key = data.get("api_key", "").strip()
+
+    if not key:
+        return jsonify({"success": False, "error": "API Key cannot be empty"}), 400
+
+    # Determine path to .env file (Knee_Replacement/.env)
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    env_path = os.path.join(basedir, ".env")
+
+    try:
+        lines = []
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+        key_found = False
+        for i, line in enumerate(lines):
+            if line.strip().startswith("GEMINI_API_KEY="):
+                lines[i] = f"GEMINI_API_KEY={key}\n"
+                key_found = True
+                break
+
+        if not key_found:
+            # Add an empty line if missing to clean up the file
+            if lines and not lines[-1].endswith("\n"):
+                lines.append("\n")
+            lines.append(f"GEMINI_API_KEY={key}\n")
+
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+        # Set in current runtime environment
+        os.environ["GEMINI_API_KEY"] = key
+
+        # Dynamically re-configure chatbot
+        import chatbot
+        import google.generativeai as genai
+        try:
+            genai.configure(api_key=key)
+            chatbot.gemini_enabled = True
+            chatbot.GEMINI_API_KEY = key
+        except Exception as ex:
+            chatbot.gemini_enabled = False
+            return jsonify({"success": False, "error": f"Failed to configure Gemini: {ex}"}), 500
+
+        return jsonify({
+            "success": True,
+            "message": "Gemini API Key saved and configured successfully!"
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to save API key: {str(e)}"}), 500

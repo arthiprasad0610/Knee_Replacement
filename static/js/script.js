@@ -122,6 +122,7 @@ function initFullChat({
   inputId, sendBtnId, containerId, typingId,
   chipsClass, voiceBtnId, clearBtnId,
   emergencyId, emergencyCloseId, charCounterId,
+  apiKeyInputId, saveKeyBtnId, apiKeyStatusId,
 }) {
   const input         = document.getElementById(inputId);
   const sendBtn       = document.getElementById(sendBtnId);
@@ -133,6 +134,10 @@ function initFullChat({
   const emergClose    = document.getElementById(emergencyCloseId);
   const charCounter   = document.getElementById(charCounterId);
   const chips         = document.querySelectorAll(`.${chipsClass}`);
+  
+  const apiKeyInput   = document.getElementById(apiKeyInputId);
+  const saveKeyBtn    = document.getElementById(saveKeyBtnId);
+  const apiKeyStatus  = document.getElementById(apiKeyStatusId);
 
   if (!input || !sendBtn || !container) return;
 
@@ -233,10 +238,16 @@ function initFullChat({
 
   // Clear chat
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
+    clearBtn.addEventListener('click', async () => {
       // Keep only the first welcome message
       const msgs = container.querySelectorAll('.message');
       msgs.forEach((m, i) => { if (i > 0) m.remove(); });
+
+      try {
+        await fetch('/api/clear-chat', { method: 'POST' });
+      } catch (err) {
+        console.error('Failed to clear database chat history:', err);
+      }
     });
   }
 
@@ -254,6 +265,61 @@ function initFullChat({
       input.value = transcript;
       input.dispatchEvent(new Event('input'));
       sendMessage();
+    });
+  }
+
+  // ── API Key Configuration ────────────────────────────────
+  if (apiKeyInput && saveKeyBtn && apiKeyStatus) {
+    // 1. Fetch current status from backend
+    async function updateStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        if (data.gemini_enabled) {
+          apiKeyStatus.innerHTML = 'Status: Active <span style="color:#10B981;">● Online (AI Active)</span>';
+          apiKeyInput.placeholder = '••••••••••••••••';
+        } else {
+          apiKeyStatus.innerHTML = 'Status: Offline <span style="color:#F59E0B;">● (Keyword Fallback)</span>';
+          apiKeyInput.placeholder = 'Enter Gemini API Key';
+        }
+      } catch (err) {
+        apiKeyStatus.innerHTML = '<span style="color:#EF4444;">Failed to load AI status</span>';
+      }
+    }
+
+    updateStatus();
+
+    // 2. Handle save click
+    saveKeyBtn.addEventListener('click', async () => {
+      const key = apiKeyInput.value.trim();
+      if (!key) {
+        apiKeyStatus.innerHTML = '<span style="color:#EF4444;">Please enter a key</span>';
+        return;
+      }
+
+      saveKeyBtn.disabled = true;
+      apiKeyStatus.textContent = 'Saving & verifying key...';
+
+      try {
+        const res = await fetch('/api/save-api-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: key }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          apiKeyStatus.innerHTML = '<span style="color:#10B981;">Key saved successfully!</span>';
+          apiKeyInput.value = '';
+          setTimeout(updateStatus, 1500);
+        } else {
+          apiKeyStatus.innerHTML = `<span style="color:#EF4444;">Error: ${data.error || 'Failed to save key'}</span>`;
+        }
+      } catch (err) {
+        apiKeyStatus.innerHTML = '<span style="color:#EF4444;">Network error saving key</span>';
+      } finally {
+        saveKeyBtn.disabled = false;
+      }
     });
   }
 
